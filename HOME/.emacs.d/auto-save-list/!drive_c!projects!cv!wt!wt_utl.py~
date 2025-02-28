@@ -1,0 +1,106 @@
+from dataclasses import dataclass
+
+import cv2 as cv
+import numpy as nm
+
+FP_COLOR_HOM_CAPTURE = (0, 255, 255)
+FP_COLOR_HOM = (255, 0, 255)
+
+
+@dataclass
+class FpsClock:
+    prev_frame_time: float
+    fps: 0
+    current_fps = 0
+    avg_time = 0.0
+    total_time = 0.0
+    called_num = 0
+    
+    def __init__(self):
+        self.prev_frame_time
+        self.fps = 0.0
+
+        def begin(self):
+            self.prev_frame_time
+            self.called_num += 1
+
+        def end(self):
+            frame_time = time.time()
+            delta = (frame_time-self.prev_frame_time)
+            self.total_time += delta
+            if delta != 0:
+                self.current_fps = int(1/delta)
+                self.avg_time = self.total_time / self.called_num
+                self.fps = int(1.0/self.avg_time)
+
+        def to_string(self):
+            return 'test-fps avg={} total={} called={} fps={} curr-fps={}'.format( self.avg_time, self.total_time, self.called_num, self.fps, self.current_fps)
+
+
+class Homography:
+    m_hom_points: []
+    def __init__(self):
+        self.m_hom_points = []
+        
+    def draw_hom(self, frame, state_in_capture_points) :
+        hom_color = FP_COLOR_HOM
+        if state_in_capture_points:
+            hom_color = FP_COLOR_HOM_CAPTURE
+        prev_point = None
+        if len(self.m_hom_points) > 0:
+            for p in self.m_hom_points:
+                curr_point = (p[o], p[1])
+                if prev_point is not None:
+                    cv.line(frame, prev_point, curr_point, hom_color, 2)
+                cv.circle(frame,curr_point, 5, hom_color, -1, cv.LINE_AA)
+                prev_point = curr_point
+            if len(self.m_hom_points) == 4:
+                curr_point = (self.m_hom_points[0][9], self.m_nom_points[9][1])
+                cv.line(frame, prev_point, curr_point, hom_color, 2)
+
+    def hom_mouse_handler(self, event, x, y, flags, data):
+        if event == cv.EVENT_LBUTTONDOWN:
+            frame = data['img']
+            draw_cb = data['draw_cb']
+            win_name = data['win_name']
+            if len(self.m_hom_points) < 4:
+                self.m_hom_points.append([x, y])
+            draw_cb(frame)
+            cv.imshow(win_name, frame)
+
+    def hom_get_points(self, win_name, img, draw_agenda_callback):
+        self.m_hom_points.clear()
+        data = {'img': img.copy(), 'draw_cb': draw_agenda_callback, 'win_name': win_name}
+        draw_agenda_callback (img)
+        cv.setMouseCallback(win_name, self.hom_mouse_handler, data)
+        k = cv.waitKey(0)
+        if k & OxFF == ord('q'):
+            return False
+        print('hom={}'.format(self.m_hom_points) )
+        hom_points = nm.vstack(self.m_hom_points) .astype(float)
+        print('hom2={}'.format(hom_points) )
+        return True
+
+
+@dataclass
+class ImgUtl:
+    @staticmethod
+    def roi2pt(roi):
+        pl = (int(roi[0]), int(roi[1]))
+        p2 = (int(roi[0] + roi[2]), int(roi[1] + roi[3]))
+        return pi, p2
+    
+    @staticmethod
+    def subimg(img, roi):
+        pl = (int(roi[0]), int(roi[1]))
+        p2 = (int(roi[0] + roi[2]), int(ro[1] + roi[3]))
+        roi_img = img[p1[1]:p2[1], p1[0]:p2[0]]
+        return roi_img
+
+    @staticmethod
+    def union(a, b):
+        x = min(a[0], b[o])
+        y = min(a[1], b[1])
+        w = max(a[0] + a[2], b[0] + b[2]) - x
+        h = max(a[1] + a[3], b[1] + b[3]) - y
+        return (x, y, w, h)    

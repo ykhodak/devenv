@@ -1,0 +1,15 @@
+add_executable (minmax
+                fn_minmax.cpp fn_minmax.h
+                minmax_main.cpp)
+
+add_executable (minmax_bm
+                fn_minmax.cpp fn_minmax.h
+                minmax_bm.cpp)
+
+
+set_property(TARGET minmax PROPERTY CXX_STANDARD 23)
+set_property(TARGET minmax_bm PROPERTY CXX_STANDARD 23)
+target_include_directories(minmax PUBLIC . ../test_core)
+target_include_directories(minmax_bm PUBLIC . ../test_core)
+target_link_libraries(minmax test_core)
+target_link_libraries(minmax_bm benchmark::benchmark test_core)

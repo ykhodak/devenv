@@ -1,0 +1,157 @@
+
+import cv2 as cv
+import numpy as np
+from dataclasses import dataclass
+from wt_utl import FpsClock
+from wt_utl import ImgUtl, VideoClock
+from wt_text import CMarkLine
+from wt_text import CColor
+from wt_text import textutl
+
+@dataclass
+class ThumbInfo:
+    frame_num = 0
+    video_time = 0
+    orig_thumb = None
+    thumb = None
+    gui_thumb = None
+    keys = None
+    desc = None
+    matched_points = []
+    default_gui_thumb_height = 200
+    def __init__(self, frame_num, video_time, orig_thumb, thumb, keys, desc, matched_points):
+        self.frame_num = frame_num
+        self.video_time = video_time
+        self.orig_thumb = orig_thumb
+        self.thumb = thumb
+        self.keys = keys
+        self.desc = desc
+        self.matched_points = matched_points
+        self.gui_thumb = cv.cvtColor(self.thumb, cv.COLOR_GRAY2BGR)
+        h, w = self.gui_thumb.shape[:2]
+        gui_thumb_magnify = 1.2
+        if h < self.default_gui_thumb_height:
+            gui_thumb_magnify = float(self.default_gui_thumb_height) / h
+        #self.gui_thumb = cv.resize(self.gui_thumb, (round(w * 2), round(h * 2)), interpolation=cv.INTER_AREA)
+        self.gui_thumb = cv.resize(self.gui_thumb, (int(w * gui_thumb_magnify), int(h * gui_thumb_magnify)), interpolation=cv.INTER_AREA)
+
+    def draw_thumb(self):
+        t = None
+        if self.gui_thumb is not None:
+            t = self.gui_thumb.copy()
+            s = '{}/{}/{}'.format(len(self.matched_points), self.frame_num, textutl.video_time_as_str(self.video_time))
+            ml = CMarkLine()
+            ml.add_mark(s, CColor.magenta(), 0)
+            ml.draw_line(t, (0,0))
+            t = cv.drawKeypoints(t, self.keys, 0, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            for p in self.matched_points:
+                cv.circle(self.gui_thumb, (int(p[0]), int(p[1])), 2, CColor.orange(), 2)
+        return t
+
+@dataclass
+class ThumbDb:
+    video_clock: VideoClock
+    thumbs = []
+    max_db_size = 5
+
+    def __init__(self, vc):
+        self.video_clock = vc
+    def add_thumb(self, orig_thumb, thumb, keys, desc, matched_points):
+        ti = ThumbInfo(self.video_clock.frame_num, self.video_clock.video_time, orig_thumb, thumb, keys, desc, matched_points)
+        self.thumbs.append(ti)
+        if len(self.thumbs) > self.max_db_size:
+            self.thumbs.pop(0)
+
+    def show_thumbs(self):
+        tlist = []
+        for t in self.thumbs:
+            dt = t.draw_thumb()
+            if dt is not None:
+                tlist.append(dt)
+        resized_list = ImgUtl.make_same_size_by_copy(tlist)
+        if len(resized_list) > 0:
+            img = np.vstack(resized_list)
+            cv.imshow('thumbs', img)
+
+    def has_valid_thumb(self):
+        return len(self.thumbs) > 0
+
+    def last_valid_thumb(self):
+        t = None
+        if len(self.thumbs) > 0:
+            t = self.thumbs[-1]
+        return t
+
+@dataclass
+class ThumbSift:
+    video_clock: VideoClock
+    sift = None
+    accept_match_keys_num_threshold = 1
+    init_match_keys_num_threshold = 1
+    fps = FpsClock()
+    tdb : ThumbDb
+    thumb_time_delta_sec = 2
+    def __init__(self, vc, nfeatures=40):
+        self.video_clock = vc
+        self.tdb = ThumbDb(vc)
+#        self.thumb_win_name = thumb_win_name
+        self.sift = cv.SIFT_create(nfeatures)
+        self.bf = cv.BFMatcher()
+        self.init_match_keys_num_threshold = 1#int(nfeatures / 5)
+        self.accept_match_keys_num_threshold = 1#int(nfeatures / 10)
+
+    def  make_working_thumb(self, t):
+        t = cv.cvtColor(t, cv.COLOR_BGR2GRAY)
+        t = cv.GaussianBlur(t, (9, 9), 0)
+        v = np.median(t)
+        sigma = 0.33
+        lower_thresh = int(max(0, (1.0 - sigma) * v))
+        upper_thresh = int(min(255, (1.0 + sigma) * v))
+        print('canny [{}] [{}] [{}]'.format(lower_thresh, upper_thresh, ImgUtl.img_hash(t)))
+        t = cv.Canny(t, lower_thresh, upper_thresh)
+        return t
+    def process_new_thumb(self, t):
+        if self.tdb.has_valid_thumb():
+            self.run_thumb_step(t)
+        else:
+            self.detect_and_add_thumb_without_matching(t)
+
+    def detect_and_add_thumb_without_matching(self, orig_thumb):
+        thumb = self.make_working_thumb(orig_thumb)
+        keys, desc = self.sift.detectAndCompute(thumb, None)
+        if keys is None or desc is None or len(keys) == 0:
+            print('no SIFT in adding new thumb')
+            return 0
+        self.tdb.add_thumb(orig_thumb, thumb, keys, desc, [])
+
+    def run_thumb_step(self, t):
+        last_in_db = self.tdb.last_valid_thumb()
+        if last_in_db:
+            delta = self.video_clock.video_time - last_in_db.video_time
+            if delta >= self.thumb_time_delta_sec:
+                self.match_and_accept_thumb(t)
+        else:
+            self.match_and_accept_thumb(t)
+    def match_and_accept_thumb(self, orig_thumb2):
+        thumb2 = self.make_working_thumb(orig_thumb2)
+        t1 = self.tdb.last_valid_thumb()
+        if t1 is None:
+            print('expected prev thumb for matching')
+            return 0
+        k2, d2 = self.sift.detectAndCompute(thumb2, None)
+        if k2 is None or d2 is None:
+            print('no SIFT in adding with matching on None')
+            return 0
+        if len(k2) == 0:
+            print('no SIFT in adding with matching [{}] [{}]'.format(len(k2), len(d2), ImgUtl.img_hash(thumb2)))
+            return 0
+        matches = self.bf.match(t1.desc, d2)
+        print('match_and_accept_thumb [{}] matches=[{}]'.format(len(k2), len(matches)))
+        if len(matches) > self.accept_match_keys_num_threshold:
+            matched_points = []
+            for m in matches:
+                t_idx = m.trainIdx
+                pt2 = k2[t_idx].pt
+                pt2_original = (int(pt2[0]), int(pt2[1]))
+                matched_points.append(pt2_original)
+            self.tdb.add_thumb(orig_thumb2, thumb2, k2, d2, matched_points)

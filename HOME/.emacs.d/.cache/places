@@ -1,0 +1,16 @@
+;;; -*- coding: utf-8 -*-
+(("/home/ykhodak/.emacs.d/.cache/recentf" . 558)
+ ("/home/ykhodak/.emacs.d/.cache/layouts/persp-auto-save" . 2300)
+ ("/home/ykhodak/"
+  (dired-filename . "/home/ykhodak/dev-tools"))
+ ("/home/ykhodak/dev-tools/"
+  (dired-filename . "/home/ykhodak/dev-tools/dev"))
+ ("/home/ykhodak/dev-tools/dev/"
+  (dired-filename . "/home/ykhodak/dev-tools/dev/utils"))
+ ("/home/ykhodak/dev-tools/dev/utils/"
+  (dired-filename . "/home/ykhodak/dev-tools/dev/utils/CMakeLists.txt"))
+ ("/home/ykhodak/dev-tools/dev/utils/CMakeLists.txt" . 110)
+ ("/home/ykhodak/dev-tools/.git/"
+  (dired-filename . "/home/ykhodak/dev-tools/.git/COMMIT_EDITMSG"))
+ ("/home/ykhodak/projects/"
+  (dired-filename . "/home/ykhodak/projects/..")))

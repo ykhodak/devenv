@@ -1,0 +1,313 @@
+#include "OrderCache.h"
+
+#include <memory>
+
+namespace TW
+{
+    using ID2ORD_DYN    = std::unordered_map<std::string, std::unique_ptr<Order>>;
+    using ORD_SET_DYN   = std::unordered_set<Order*>;
+    using S2ORDERS_DYN  = std::unordered_map<std::string, ORD_SET_DYN>;
+
+
+    template<class M>
+    class OrderCacheInterfaceDynImpl : public OrderCacheInterface
+    {
+#define GUARD std::lock_guard<M> _g_(m_mtx);
+    public:
+        void addOrder(Order order)override
+        {
+            GUARD;
+            doAddOrder(std::make_unique<Order>(order));
+        };
+
+        void addOrder(const std::string& ordId, const std::string& secId, const std::string& side, const unsigned int qty, const std::string& user,const std::string& company)
+        {
+            
+        }
+        
+        void cancelOrder(const std::string& orderId)override
+        {
+            GUARD;
+            auto i = m_id2ord.find(orderId);
+            if (i != m_id2ord.end())
+            {
+                auto o = i->second.get();
+                auto user = o->user();
+                auto security = o->securityId();
+                if (!unregister_order(o, user, m_u2orders))
+                {
+                    log_print("ERROR user not found[", user, "]");
+                }
+                if (!unregister_order(o, security, m_sec2orders))
+                {
+                    log_print("ERROR security not found[", security, "]");
+                }
+                //std::cout << "cancelled " << *o << std::endl;
+                m_id2ord.erase(i);
+            }
+            else
+            {
+                log_print("ERROR order no found[", orderId, "]");
+            }
+        };
+
+        void cancelOrdersForUser(const std::string& user)override
+        {
+            GUARD;
+            auto j = m_u2orders.find(user);
+            if (j != m_u2orders.end())
+            {
+                const auto& lst = j->second;
+                for (auto o : lst)
+                {
+                    auto oid = o->orderId();
+                    auto k = m_id2ord.find(oid);
+                    if (k != m_id2ord.end())
+                    {
+                        auto security = o->securityId();
+                        auto si = m_sec2orders.find(security);
+                        if (si != m_sec2orders.end()) 
+                        {
+                            si->second.erase(o);
+                        }
+                        m_id2ord.erase(k);
+                    }
+                    else
+                    {
+                        log_print("ERROR order no found[", oid, "]");
+                    }
+                }
+                m_u2orders.erase(j);
+            }
+            else
+            {
+                log_print("ERROR user no found[", user, "]");
+            }
+        };
+
+        void cancelOrdersForSecIdWithMinimumQty(const std::string& securityId, unsigned int minQty)override
+        {
+            GUARD;
+            auto i = m_sec2orders.find(securityId);
+            if (i != m_sec2orders.end())
+            {
+                S2ORDERS_DYN usr_o2cancel;
+                auto it_ord = i->second.begin();
+                while (it_ord != i->second.end())
+                {
+                    auto o = *it_ord;
+                    bool erase_ord = false;
+                    erase_ord = (o->qty() >= minQty);
+                    if (erase_ord)
+                    {
+                        auto user = o->user();
+                        auto u = usr_o2cancel.find(user);
+                        if (u == usr_o2cancel.end())
+                        {
+                            ORD_SET_DYN lst;
+                            lst.insert(o);
+                            usr_o2cancel.emplace(user, std::move(lst));
+                        }
+                        else
+                        {
+                            u->second.insert(o);
+                        }
+
+                        //std::cout << "cancelled " << *o << std::endl;
+                        m_id2ord.erase(o->orderId());
+                    }
+
+                    if (erase_ord)
+                    {
+                        it_ord = i->second.erase(it_ord);
+                    }
+                    else
+                    {
+                        ++it_ord;
+                    }
+                }//for
+
+                for (const auto& j : usr_o2cancel)
+                {
+                    auto k = m_u2orders.find(j.first);
+                    if (k != m_u2orders.end())
+                    {
+                        auto& lst = k->second;
+                        for (const auto& o : j.second)
+                        {
+                            lst.erase(o);
+                        }
+                    }
+
+                }
+            }
+        }
+
+        unsigned int getMatchingSizeForSecurity(const std::string& securityId)override
+        {
+            unsigned int rv = 0;
+
+            struct working_qty
+            {
+                unsigned int buy{ 0 };
+                unsigned int sell{ 0 };
+            };
+            std::unordered_map<std::string, working_qty> client2wq;
+
+            auto i = m_sec2orders.find(securityId);
+            if (i != m_sec2orders.end())
+            {
+                for (const auto o : i->second)
+                {
+                    auto c = client2wq.find(o->company());
+                    if (c == client2wq.end())
+                    {
+                        working_qty wq;
+                        if (o->side() == "Buy") { wq.buy += o->qty(); }
+                        else if (o->side() == "Sell") { wq.sell += o->qty(); }
+                        client2wq[o->company()] = wq;
+                    }
+                    else
+                    {
+                        working_qty& wq = c->second;
+                        if (o->side() == "Buy") { wq.buy += o->qty(); }
+                        else if (o->side() == "Sell") { wq.sell += o->qty(); }
+                    }
+                }
+
+
+                auto i = client2wq.begin();
+                while (i != client2wq.end())
+                {
+                    auto j = i;
+                    ++j;
+                    if (j == client2wq.end())break;
+                    if (i->second.buy > 0 && j->second.sell > 0)
+                    {
+                        auto q = std::min(i->second.buy, j->second.sell);
+                        rv += q;
+
+                        i->second.buy -= q;
+                        j->second.sell -= q;
+                    }
+                    if (i->second.sell > 0 && j->second.buy > 0)
+                    {
+                        auto q = std::min(i->second.sell, j->second.buy);
+                        rv += q;
+
+                        i->second.sell -= q;
+                        j->second.buy -= q;
+                    }
+
+                    ++i;
+                }
+            }
+            else
+            {
+                log_print("ERROR securityId not found[", securityId, "]");
+            }
+
+            return rv;
+        }
+
+        std::vector<Order> getAllOrders() const override
+        {
+            GUARD;
+            std::vector<Order> rv;
+            for (const auto& i : m_id2ord)
+            {
+                rv.push_back(*(i.second));
+            }
+            return rv;
+        }
+
+        KEYS getAllUsers() const
+        {
+            GUARD;
+            return getKeys(m_u2orders.begin(), m_u2orders.end());;
+        };
+
+        KEYS getAllSecurities() const
+        {
+            GUARD;
+            return getKeys(m_sec2orders.begin(), m_sec2orders.end());
+        };
+
+        /// get num of sell/buy orders by user
+        std::unordered_map<std::string, std::pair<size_t, size_t>> getOrdNumByUser() const
+        {
+            GUARD;
+            return statGroup(m_u2orders);
+        };
+
+        /// get num of sell/buy orders by security
+        OSTAT getOrdNumBySecurity() const
+        {
+            GUARD;
+            return statGroup(m_sec2orders);
+        };
+
+
+    protected:
+        void register_order(Order* o, std::string context, S2ORDERS_DYN& container)
+        {
+            auto i = container.find(context);
+            if (i == container.end())
+            {
+                ORD_SET_DYN lst;
+                lst.insert(o);
+                container.emplace(context, std::move(lst));
+            }
+            else
+            {
+                auto& lst = i->second;
+                lst.insert(o);
+            }
+        };
+
+        bool unregister_order(Order* o, std::string context, S2ORDERS_DYN& container)
+        {
+            auto j = container.find(context);
+            if (j != container.end())
+            {
+                j->second.erase(o);
+            }
+            else
+            {
+                return false;
+            }
+            return true;
+        }
+
+
+        OSTAT statGroup(const S2ORDERS_DYN& g) const
+        {
+            std::unordered_map<std::string, std::pair<size_t, size_t>> rv;
+            for (const auto& i : g)
+            {
+                auto p = std::make_pair(0, 0);
+                for (const auto& o : i.second)
+                {
+                    if (o->side() == "Buy") { p.first += 1; }
+                    else if (o->side() == "Sell") { p.second += 1; }
+                }
+
+                rv.emplace(i.first, p);
+            }
+            return rv;
+        };
+
+        void doAddOrder(std::unique_ptr<Order>&& ptr)
+        {
+            auto o = ptr.get();
+            m_id2ord[o->orderId()] = std::move(ptr);
+            register_order(o, o->user(), m_u2orders);
+            register_order(o, o->securityId(), m_sec2orders);            
+        }
+
+        ID2ORD_DYN      m_id2ord;
+        S2ORDERS_DYN    m_u2orders;
+        S2ORDERS_DYN    m_sec2orders;
+        mutable M       m_mtx;
+    };
+};

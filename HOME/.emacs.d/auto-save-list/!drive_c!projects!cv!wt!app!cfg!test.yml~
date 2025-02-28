@@ -1,0 +1,11 @@
+import:
+  file: wt_common.yml
+
+video:
+  file: white_rv_vga.mp4
+#  defect: white_rv_defect.mp4
+#  start: 84,1336:385:267:193
+#  export: 200-300
+
+
+

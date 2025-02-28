@@ -1,0 +1,50 @@
+#include <benchmark/benchmark.h>
+#include "tw_test.h"
+
+std::vector<std::string> securities = { "SecId1", "SecId2", "SecId3" };
+
+static void BM_MatchingSize(benchmark::State& state) {  
+  int N = state.range(0);
+  TW::OrderCacheInterfaceImpl<TW::CM> c;
+  generate_n_orders_cache<TW::OrderCacheInterfaceImpl<TW::CM>>(N, c);  
+  for (auto _ : state)
+    {
+      for (const auto& s : securities)
+	{      
+	  auto res = c.getMatchingSizeForSecurity(s);
+	  benchmark::DoNotOptimize(res);
+	}
+    }
+}
+
+static void BM_MatchingSizeDyn(benchmark::State& state) {  
+  int N = state.range(0);
+  TW::OrderCacheInterfaceDynImpl<TW::CM> c;
+  generate_n_orders_cache<TW::OrderCacheInterfaceDynImpl<TW::CM>>(N, c);  
+  for (auto _ : state)
+    {
+      for (const auto& s : securities)
+	{      
+	  auto res = c.getMatchingSizeForSecurity(s);
+	  benchmark::DoNotOptimize(res);
+	}
+    }
+}
+
+
+BENCHMARK(BM_MatchingSize)->DenseRange(1000, 10000, 2000);
+BENCHMARK(BM_MatchingSizeDyn)->DenseRange(1000, 10000, 2000);
+
+
+
+void run_tw_test()
+{
+  TW::test_order_cache();
+}
+
+int main(int argc, char** argv)
+{
+  //   run_tw_test();
+   ::benchmark::Initialize(&argc, argv);
+   ::benchmark::RunSpecifiedBenchmarks();
+}

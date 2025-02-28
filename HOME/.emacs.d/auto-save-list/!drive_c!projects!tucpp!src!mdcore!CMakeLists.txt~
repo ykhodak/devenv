@@ -1,0 +1,40 @@
+include(CMakePrintHelpers)
+
+set(SRC util.h util.cpp
+        tu.h tu.cpp
+        socket_buffer.h socket_buffer.cpp
+        md_ref.h md_ref.cpp
+        base_buffer.h base_buffer.cpp
+        records.h records.cpp
+        archive.h archive.cpp
+        rec_connection.h rec_connection.cpp
+        admin_connection.h admin_connection.cpp
+        simulator.h simulator.cpp        
+       )
+
+add_library(tumsg STATIC ${SRC})
+set_property(TARGET tumsg PROPERTY CXX_STANDARD 23)
+target_include_directories(tumsg PUBLIC .)
+target_link_libraries(tumsg PRIVATE libevent::core libevent::extra)
+
+add_executable (md_server md_server.cpp)
+add_executable (md_client md_client.cpp)
+add_executable (admin_client admin_client.cpp)
+
+
+set_property(TARGET md_server PROPERTY CXX_STANDARD 23)
+set_property(TARGET md_client PROPERTY CXX_STANDARD 23)
+set_property(TARGET admin_client PROPERTY CXX_STANDARD 23)
+
+
+target_link_libraries(md_server PRIVATE libevent::core tumsg)
+target_link_libraries(md_client PRIVATE libevent::core tumsg)
+target_link_libraries(admin_client PRIVATE libevent::core tumsg)
+
+if(UNIX)
+        target_link_libraries(md_server PRIVATE libevent::pthreads)
+        target_link_libraries(md_client PRIVATE libevent::pthreads)
+        target_link_libraries(admin_client PRIVATE libevent::pthreads)
+endif()
+#Threads::Threads
+#cmake_print_properties(TARGETS libevent::pthreads PROPERTIES INTERFACE_INCLUDE_DIRECTORIES INTERFACE_LINK_LIBRARIES)

@@ -1,0 +1,53 @@
+﻿# CMakeList.txt : CMake project for test3, include source and define
+# project specific logic here.
+#
+cmake_minimum_required (VERSION 3.24)
+set(CMAKE_TOOLCHAIN_FILE "c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake")
+
+
+project (basetest C CXX)
+
+find_package(benchmark REQUIRED)
+find_package(Boost 1.60.0 REQUIRED system coroutine regex asio)
+find_package(folly REQUIRED)
+find_package(wangle REQUIRED)
+
+
+#set(BOOST_INCLUDE_LIBRARIES thread filesystem system program_options asio date_time)
+#set(BOOST_ENABLE_CMAKE ON)
+
+add_executable (helloworld "hello-world.cpp" "hello-world.h")
+add_executable (hellobm "hello-bm.cpp")
+add_executable (hbst "hello-boost.cpp")
+add_executable (test_spsc "test_spsc.cpp")
+add_executable (bm_map "bm_map.cpp")
+add_executable (test_async_udp_echo_server "async_udp_echo_server.cpp")
+add_executable (test_folly test_folly.cpp)
+add_executable (bm_folly bm_folly.cpp)
+add_executable (wangle_echo_server wangle_echo_server.cpp)
+add_executable (wangle_echo_client wangle_echo_client.cpp)
+
+
+include_directories(${Boost_INCLUDE_DIR} ${BOOST_LOCKFREE_DIR} ${BOOST_ASIO_DIR})
+
+set_property(TARGET helloworld PROPERTY CXX_STANDARD 23)
+set_property(TARGET hellobm PROPERTY CXX_STANDARD 23)
+set_property(TARGET hbst PROPERTY CXX_STANDARD 23)
+set_property(TARGET test_spsc PROPERTY CXX_STANDARD 23)
+set_property(TARGET bm_map PROPERTY CXX_STANDARD 23)
+set_property(TARGET test_async_udp_echo_server PROPERTY CXX_STANDARD 23)
+set_property(TARGET test_folly PROPERTY CXX_STANDARD 23)
+set_property(TARGET bm_folly PROPERTY CXX_STANDARD 23)
+set_property(TARGET wangle_echo_server PROPERTY CXX_STANDARD 23)
+set_property(TARGET wangle_echo_client PROPERTY CXX_STANDARD 23)
+
+target_link_libraries(hellobm benchmark::benchmark)
+target_link_libraries(bm_map benchmark::benchmark)
+target_link_libraries(test_async_udp_echo_server Boost::asio)
+target_link_libraries(test_folly Folly::folly)
+target_link_libraries(bm_folly PRIVATE benchmark::benchmark Folly::folly)
+target_link_libraries(wangle_echo_server PRIVATE wangle::wangle)
+target_link_libraries(wangle_echo_client PRIVATE wangle::wangle)
+#target_link_libraries(hbst PRIVATE Boost::lockfree)
+
+# TODO: Add tests and install targets if needed.

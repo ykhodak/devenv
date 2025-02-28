@@ -1,0 +1,9 @@
+add_executable (hrank_misc
+                hrank_main.cpp
+                oop_count_num.cpp
+                spell_cast.cpp
+                loop.cpp)
+
+set_property(TARGET hrank_misc PROPERTY CXX_STANDARD 23)
+target_include_directories(hrank_misc PUBLIC . ../test_core)
+target_link_libraries(hrank_misc test_core)

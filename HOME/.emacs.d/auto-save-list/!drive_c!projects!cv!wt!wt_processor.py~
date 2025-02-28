@@ -1,0 +1,371 @@
+import datetime
+import cv2 as cv
+import wt_gui_def as gwt
+from dataclasses import dataclass
+from wt_utl import VideoClock, Homography, ImgUtl
+from wt_tracker import TrackerMgr
+from wt_text import CColor, CMarkLine
+from wt_feature_keys import FeatureKeys
+
+
+"""
+q - quite
+p - pause
+c - continue
+t - track
+r - reset tracks
+h - take Homography points
+3,5,7,9 - pause with gaussian blur
+"""
+
+
+blur_kernels = {3,5,7,9}
+
+cmd_preprocess = {ord(cmd_preproc_none),
+                  ord(cmd_preproc_sharpen),
+                  ord(cmd_preproc_blur_k3),
+                  ord(cmd_preproc_blur_k5),
+                  ord(cmd_preproc_blur_k7),
+                  ord(cmd_preproc_blur_k9)}
+
+# todo - chck template matching and normalized cross correlation
+# todo - start tracking recreate objects
+
+FP_State_Run = 0
+#FP_State_Features = 1
+FP_State_Pause = 2
+FP_State_CaptureHOM = 3
+FP_State_Tracking = 4
+FP_State_TrackingReset = 5
+
+@dataclass
+class FramesProcessor:
+    vclock: VideoClock
+    frame_stamps: []
+    roi = None
+    agenda_text_x_offset = 7
+    agenda_text_y_line_h = 70
+    font = cv.FONT_HERSHEY_SIMPLEX
+    show_working_frame = 0
+    tracking_frame_thumb = None
+    working_frame_preproc = 0
+    state = FP_State_Run
+    paused_state = FP_State_Run
+    win_name = 'frame'
+    tmgr: TrackerMgr = None
+    hom: Homography = None
+    tracking_video_time = 0
+    tracking_delta_sec = 0.1 #0.5
+    dbg_skip_delta_sec = 0
+    defect_file = None
+    gui_sift = None
+    gui_orb = None
+    gui_show_features = False
+    gui_feature_keys: FeatureKeys = None
+
+    def __init__(self, video_clock, defect_file = None):
+        self.vclock = video_clock
+        self.defect_file = defect_file
+        self.frame_stamps = []
+        self.tmgr = TrackerMgr(video_clock, 'C')
+        self.hom = Homography(video_clock)
+        self.gui_sift = cv.SIFT_create(100)
+        self.gui_orb = cv.ORB.create(100)
+
+    def draw_frame_stamps(self, frame, y):
+        if len(self.frame_stamps) > 0:
+            for f in self.frame_stamps:
+                s1 = '{}'.format(f)
+                cv.putText(frame, s1, (self.agenda_text_x_offset, y), self.font, 1, CColor.olive(), 2, cv.LINE_AA)
+                y += self.agenda_text_y_line_h
+
+    def draw_agenda(self, frame, s=''):
+        preproc_str = ''
+        state_str = ''
+        agenda_color = CColor.olive()
+#        if self.state == FP_State_Finished:
+#            state_str = '[F]'
+        if self.state == FP_State_Pause:
+            state_str = '[P]'
+        elif self.state == FP_State_CaptureHOM:
+            state_str = '[R]'
+        elif self.state == FP_State_Tracking:
+            state_str = '[T]'
+        elif self.state == FP_State_TrackingReset:
+            agenda_color = CColor.magenta()
+            state_str = '[R]'
+        if self.working_frame_preproc == 0:
+            preproc_str = 'N'
+        elif self.working_frame_preproc == 1:
+            preproc_str = 'S1'
+        elif self.working_frame_preproc in blur_kernels:
+            preproc_str = 'k{}'.format(self.working_frame_preproc)
+        fps_str = s + state_str + '[{}]#{}/{}/{}fps [{}fps]:'.format(preproc_str, self.vclock.frame_num, self.vclock.video_time_as_str(), self.vclock.reading_fps, self.vclock.time_window_reading_fps)
+        ml = CMarkLine()
+        ml.add_mark(fps_str, agenda_color)
+        agenda_pos = (0,0)
+        d2 = ml.draw_line(frame, agenda_pos)
+        agenda_line_height = d2[1]
+        agenda_line_y = 0
+        agenda_pos = (d2[0], agenda_line_y)
+        #y = self.agenda_text_y_line_h
+        #cv.putText(frame, fps_str, (self.agenda_text_x_offset, y), self.font, 1,  CColor.olive(), 2, cv.LINE_AA)
+        y = self.agenda_text_y_line_h
+        self.draw_frame_stamps(frame, y)
+        if (self.state == FP_State_Tracking or self.state == FP_State_TrackingReset or (self.state == FP_State_Pause and self.paused_state == FP_State_Tracking or self.paused_state == FP_State_TrackingReset)):
+            if self.tmgr:
+                d2 = self.tmgr.draw_agenda(frame, agenda_pos)
+                self.tmgr.draw_roi(frame)
+        if self.hom:
+            self.hom.draw_hom(frame, self.state == FP_State_CaptureHOM)
+        if self.gui_show_features and self.gui_feature_keys is not None:
+            self.gui_feature_keys.draw_custom_keys(frame)
+            #print('draw-features')
+            #frame = self.gui_feature_keys.draw_sift_keys(frame)
+            #self.gui_feature_keys.draw_orb_keys(frame)
+
+    def draw_agenda_wrapper(self, img):
+        self.draw_agenda(img)
+        cv.imshow(self.win_name, img)
+
+    def roi_get_point(self, img):
+        self.roi = cv.selectROI(self.win_name, img)
+        return self.roi
+
+    def enter_pause(self, frame):
+        self.paused_state = self.state
+        self.state = FP_State_Pause
+        self.draw_agenda(frame)
+        cv.imshow(self.win_name, frame)
+        while True:
+            k = cv.waitKey(1)
+            if k & 0xFF == ord(cmd_quite):
+                return False
+            if k & 0xFF == ord(cmd_continue):
+                self.enter_continue()
+                break
+        return True
+
+    def enter_homography_capture(self, frame):
+        if self.hom:
+            self.paused_state = self.state
+            self.state = FP_State_CaptureHOM
+            if not self.hom.hom_get_points(self.win_name, frame, self.draw_agenda_wrapper):
+                return False
+            self.state = self.paused_state
+        return True
+
+    def change_preprocess(self, frame, k_cmd):
+        self.working_frame_preproc = k_cmd
+        self.process_frame(frame)
+
+    def enter_continue(self):
+        self.state = self.paused_state
+
+
+    def gui_start_tracking(self, frame):
+        roi = cv.selectROI(self.win_name, frame)
+        if roi is not None and (roi[2] * roi[3] > 4):
+            self.tmgr.drop_tracking_history()
+            self.tmgr.restart_trackers(frame, roi)
+            self.tmgr.update_trackers(frame)
+            self.state = FP_State_Tracking
+            #self.start_tracking(frame, roi)
+
+    def restart_tracking(self, frame, roi):
+        if roi is not None and (roi[2] * roi[3] > 4):
+            if self.tmgr:
+                self.vclock.log('restart tracking on {}'.format(roi))
+                self.tmgr.restart_trackers(frame, roi)
+                #self.tmgr.init_trackers(frame, roi)
+                #self.tmgr.update_trackers(frame)
+                self.state = FP_State_Tracking
+
+    def process_keyboard(self, frame) :
+        k = cv.waitKey(1) & 0xFF
+        if k == ord(cmd_quite):
+            return False
+        elif k == ord(cmd_frame_stamp):
+            self.frame_stamps.append(self.vclock.frame_num)
+        elif k == ord('h'):
+            if not self.enter_homography_capture(frame):
+                return False
+        elif k == ord(cmd_reset_tracking):
+            self.reset_tracking(frame)
+        elif k == ord(cmd_track):
+            self.gui_start_tracking(frame)
+        elif k == ord(cmd_pause):
+            if not self.enter_pause(frame):
+                return False
+        elif k in cmd_preprocess:
+            self.vclock.log('ykh- cmd_preprocess')
+            k_num = k - ord('0')
+            self.change_preprocess(frame, k_num)
+        elif k == ord(cmd_working_frame) or k == ord(cmd_edge_frame):
+            if self.show_working_frame == k:
+                self.show_working_frame = 0
+            else:
+                self.show_working_frame = k
+
+            #self.show_working_frame = not self.show_working_frame
+            self.process_frame(frame)
+        elif k == ord(cmd_skip):
+            self.dbg_skip_delta_sec += 1
+        elif k == ord(cmd_error):
+            if not self.read_defect_file():
+                return False
+        elif k == ord(cmd_features):
+            if not self.toggle_show_features(frame):
+                return False
+        elif k == ord(cmd_continue):
+            self.enter_continue()
+            #self.state = FP_State_Run
+        return True
+
+    def track_frame(self, frame):
+        self.tracking_video_time = self.vclock.video_time
+        thumb_size = (250,150)
+        h, w, _ = frame.shape
+        if h < 5 or w < 5:
+            self.vclock.log('video frame size too small {}'.format((w,h)))
+            return
+        self.tracking_frame_thumb = cv.resize(frame, thumb_size)
+        th, tw,_ = self.tracking_frame_thumb.shape
+        fx = thumb_size[0]/float(w)
+        fy = thumb_size[1]/float(h)
+        #print('track_frame {} {} {}'.format((w,h), (fx,fy), (tw,th)))
+        if self.state == FP_State_Tracking:
+            has_lost_trackers = False
+            if self.tmgr:
+                has_lost_trackers = self.tmgr.update_trackers(frame)
+                if not self.tmgr.has_active_tracker() or self.tmgr.dthumb.thumb_delta_error:
+                    self.vclock.log('init-reset-tracking')
+                    self.reset_tracking(frame)
+                    return
+                self.dbg_locate_thumb(frame)
+#                if self.tmgr.union_roi:
+#                    self.vclock.log('track {}'.format(self.tmgr.union_roi))
+            if has_lost_trackers:
+                self.restore_lost_trackers(frame)
+            else:
+                self.improve_tracking(frame)
+            if self.tmgr is not None and self.tracking_frame_thumb is not None:
+                self.tmgr.rebuild_tracking_gui_thumbs(self.tracking_frame_thumb, (fx, fy))
+#        elif self.state == FP_State_TrackingReset:
+#            print('FP_State_TrackingReset')
+#            self.tmgr.gui_dthumb.rebuild_records_window()
+#            self.find_lost_tracking_object(frame)
+    def make_frame_step(self, frame):
+        if self.state == FP_State_TrackingReset:
+            self.find_lost_tracking_object(frame)
+            self.tmgr.gui_dthumb.rebuild_records_window()
+        elif self.state == FP_State_Tracking:
+            delta = self.vclock.video_time - self.tracking_video_time
+            if delta >= (self.tracking_delta_sec + self.dbg_skip_delta_sec):
+                self.track_frame(frame)
+                if self.dbg_skip_delta_sec > 0:
+                    self.dbg_skip_delta_sec = 0
+        if self.gui_show_features:
+            self.gui_build_features(frame)
+            #else:
+            #    print('skip tracking {}'.format(delta))
+
+    def gui_show_frame(self, frame):
+        gui_frame = frame
+        if self.show_working_frame == ord(cmd_working_frame):
+            gray_img, edge_img = ImgUtl.prepare_image4matching(frame)
+            gui_frame = gray_img
+            #gui_frame = ImgUtl.make_tracking_working_image(frame)
+            gui_frame = cv.cvtColor(gui_frame, cv.COLOR_GRAY2BGR)
+        if self.show_working_frame == ord(cmd_edge_frame):
+            print('preparing edge')
+            gray_img, edge_img = ImgUtl.prepare_image4matching(frame)
+            gui_frame = edge_img
+            #gui_frame = ImgUtl.make_tracking_working_image(frame)
+            gui_frame = cv.cvtColor(gui_frame, cv.COLOR_GRAY2BGR)
+        self.draw_agenda(gui_frame)
+        cv.imshow(self.win_name, gui_frame)
+    def dbg_locate_thumb(self, frame):
+        self.tmgr.dthumb.locate_thumb_in_image(frame, shallow_match = True)
+
+    def restore_lost_trackers(self, frame):
+        #self.find_lost_tracking_object(frame)
+        if self.tmgr:
+            self.tmgr.restore_lost_trackers(frame)
+
+    def reset_tracking(self, frame):
+        self.vclock.log('tracking-reset')
+        self.state = FP_State_TrackingReset
+        if self.tmgr:
+            self.tmgr.deactivate_trackers()
+        self.find_lost_tracking_object(frame)
+
+    def find_lost_tracking_object(self, frame):
+        if self.tmgr.dthumb.locate_thumb_in_image(frame):
+            self.vclock.log('found-tracks from #{} {:.2f}/{} {}'.format(self.tmgr.dthumb.origin_matched_thumb.wt.frame_num, self.tmgr.dthumb.origin_corr, len(self.tmgr.dthumb.origin_matched_points), self.tmgr.dthumb.origin_matched_rect))
+            self.restart_tracking(frame, self.tmgr.dthumb.origin_matched_rect)
+            recovery_thumb = ImgUtl.subimg(frame, self.tmgr.dthumb.origin_matched_rect)
+            cv.imshow('recovery', recovery_thumb)
+        else:
+            self.vclock.log('failed-2-find-tracks')
+
+    def improve_tracking(self, frame):
+        i = 0
+        """
+        t = self.tmgr.thumb_sift.tdb.last_confident_thumb()
+        if t is not None:
+            r = t.get_matched_rect_in_context_frame()
+            if ImgUtl.roi_is_a_inside_b(r, self.tmgr.union_roi):
+                print('improving [#{}] {}/{}'.format(t.frame_num, r, self.tmgr.union_roi))
+                self.tmgr.restart_trackers(frame, r)
+            #self.tmgr.union_roi
+        """
+
+    def next_frame(self, frame):
+        if not self.process_frame(frame):
+            return False
+        return True
+    def process_frame(self, frame):
+        frame = self.preprocess_frame(frame)
+        if not self.process_keyboard(frame):
+            return False
+        self.make_frame_step(frame)
+        self.gui_show_frame(frame)
+        return True
+
+    def preprocess_frame(self, frame):
+        if self.working_frame_preproc == 0:
+            return frame
+        elif self.working_frame_preproc == 1:
+            frame = ImgUtl.sharpen_image_via_filter3(frame)
+        elif self.working_frame_preproc in blur_kernels:
+            gk = self.working_frame_preproc
+            frame = cv.GaussianBlur(frame, (gk, gk), 0)
+        return frame
+
+    def read_defect_file(self):
+        if self.defect_file is not None:
+            cap = cv.VideoCapture(self.defect_file)
+            if not cap.isOpened():
+                print('ERR Failed to open defect emulation video file [{}]'.format(self.defect_file))
+                cap.release()
+                return True
+            self.vclock.log('reading defect emulation  video file [{}]'.format(self.defect_file))
+            while cap.isOpened():
+                r, frame = cap.read()
+                if not r:
+                    self.vclock.log('finished defect emulation video')
+                    cap.release()
+                    return True
+                if not self.process_frame(frame):
+                    return False
+                self.vclock.next_frame()
+        return True
+
+    def toggle_show_features(self, frame):
+        self.gui_show_features = not self.gui_show_features
+        self.process_frame(frame)
+        return True
+
+    def gui_build_features(self, frame):
+        self.gui_feature_keys = FeatureKeys.prepareDetectAndComputeKp(self.gui_sift, self.gui_orb, frame)

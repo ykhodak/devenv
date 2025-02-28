@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+source ./ws.env
+
+if [[ $(uname) == 'Linux' ]]; then
+    ../build/src/md_client spinner.properties b
+else
+    ../build/src/$SPINNER_BUILD/md_client.exe spinner.properties b
+fi
+

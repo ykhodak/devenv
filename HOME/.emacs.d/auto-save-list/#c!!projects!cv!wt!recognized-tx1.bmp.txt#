@@ -1,0 +1,50 @@
+import cv2 as cv
+from dataclasses import dataclass
+
+@dataclass
+class CColor:
+@staticmethod
+def blue(): return 255, 0, 0
+@staticmethod
+def red(): return 0, 0, 255
+@staticmethod
+def green():return 0, 255, 0
+@staticmethod
+def aqua():return 255, 255, 0
+@staticmethod
+def steelblue(): return 180, 130, 70
+@staticmethod
+def yellow():return 0, 255, 255
+@staticmethod
+def orange():return 0, 165, 255
+@staticmethod
+def tomato():return 71, 99, 255
+@staticmethod
+def magenta():return 255, 0, 255
+@staticmethod
+def darkgreen():return 0, 100, 0
+@staticmethod
+def olive():return 128, 128, 0
+@staticmethod
+def gray():return 128, 128, 128
+@staticmethod
+def silver():return 192, 192, 192
+@staticmethod
+def gainsboro():return 220, 220, 220
+@dataclass
+class CMark():
+text: str
+type: int
+color: None
+def init (self, text, color):
+self.text = text
+self.color = color
+def draw mark(self, img,
+pos=(0, 0),
+font _scale=2,
+font _thickness=2,
+font=cv.FONT HERSHEY PLAIN,
+text color bg=(0, 0, 0)
+)e
+
+

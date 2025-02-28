@@ -1,0 +1,42 @@
+#pragma once
+
+#include <string_view>
+
+namespace cfix
+{
+    enum class fmsg{
+        Uknown = -1,
+        NewOrd,
+        NewOrdML,
+        ExecAck,
+        ExecPart,
+        ExecFill,
+        ExecPartLeg,
+        ExecPartML,
+        ExecFillLeg,
+        ExecFillML,
+        CancelReq,
+        CancelPending,
+        Canceled,
+        CancelReject,
+        Reject,
+        RplReqML,
+        RplReq,
+        RplPending,
+        Replaced
+    };
+    
+    void colorize_stdin();
+    void run_test();
+
+    class fix_view
+    {
+    public:
+        fix_view(const std::string_view& fix);
+        fmsg parse_msg();
+    private:
+        void parse_message_type(const std::string_view& tag35, const std::string_view& tag39);
+        const std::string_view& m_fix;
+        fmsg                    m_message_type{cfix::fmsg::Uknown};
+    };
+};

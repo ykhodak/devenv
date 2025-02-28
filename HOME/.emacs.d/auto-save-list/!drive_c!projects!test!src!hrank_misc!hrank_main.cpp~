@@ -1,0 +1,9 @@
+extern void test_class_D();
+extern void cast_spell();
+
+int main()
+{
+    //test_class_D();
+    cast_spell();
+    return 0;
+}

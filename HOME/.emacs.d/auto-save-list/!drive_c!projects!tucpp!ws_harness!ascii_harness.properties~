@@ -1,0 +1,7 @@
+host=localhost
+port=8080
+cmd=1k
+debug_log=dbglog.txt
+stat_log=statlog.txt
+#log_level i-info d-debug v-verbose
+log_level=v

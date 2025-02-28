@@ -1,0 +1,14 @@
+[hint|rect]boundingRect [(x,y)]->(x,y,w,h) / cv2-cource-mod4-motion-detection
+
+[cv|mat|ucf|02] filtering / https://www.youtube.com/watch?v=1THuCOKNn6U
+[cv|mat|ucf|03] edge / https://www.youtube.com/watch?v=lC-IrZsdTrw
+[cv|mat|ucf|03] features / https://www.youtube.com/watch?v=_qgKQGsuKeQ&t=4s
+[cv|mat|ucf|04] interest points / https://www.youtube.com/watch?v=_qgKQGsuKeQ&t=4s
+[cv|mat|ucf|05] sift / https://www.youtube.com/watch?v=NPcMS49V5hg&t=769s
+[cv|mat|ucf|06] optical / flow https://www.youtube.com/watch?v=5VyLAH8BhF8
+[cv|mat|ucf|07] pyramids lhttps://www.youtube.com/watch?v=NiGcuurpV5o&t=536s
+
+kalman https://www.youtube.com/watch?v=E-6paM_Iwfc
+
+
+some sift: https://www.youtube.com/watch?v=gEoWMLXk0Ys

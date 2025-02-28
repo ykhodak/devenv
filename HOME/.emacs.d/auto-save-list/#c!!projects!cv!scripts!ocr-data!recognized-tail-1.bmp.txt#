@@ -1,0 +1,50 @@
+import time
+import cv2 as cv
+
+def printusage():
+print('Usage: ' + sys.argv[0] + ' <input-video-file> <output-video-file> <start-frame>')
+
+if len(sys.argv) < 4:
+printusage()
+sys .exit(0)
+
+input_file = sys.argv[1]
+out_file = sys.argv[2]
+start_frame = int(sys.argv[3])
+cap = None
+
+icCap_out = Nonew
+
+def initializeQ:
+
+global cap
+
+global cap_out
+
+cap = cv.VideoCapture(input_file)
+
+if(cap.isopened()):
+w = int(cap.get(cv.CAP_PROP_FRAME_WIDTH) )
+h = int(cap.get (cv.CAP_PROP_FRAME_HEIGHT) )
+fps = cap.get(cv.CAP_PROP_FPS)
+print('reading [{}] w={} h={} fps={}'.format(input_file,w,h,fps))
+fourcc = cv.Videowriter_fourcc(*'mMP4v')
+cap_out = cv.Videowriter(out_file, fourcc, fps, (w,h))
+
+def process_video():
+
+global cap
+cap = cv.VideocCapture(input_file)
+idx = 0
+
+whi le(cap.isOpened()):
+r, frame = cap.read()
+if not r:
+break
+# print('read {}'.format(Cidx))
+ifCidx >= start_frame):
+cap_out .write (frame)
+# print('write {}'.format(Cidx))
+idx += 1
+
+

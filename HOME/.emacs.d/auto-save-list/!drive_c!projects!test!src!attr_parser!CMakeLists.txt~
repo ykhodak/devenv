@@ -1,0 +1,15 @@
+add_executable (codify
+                fn_codify.cpp fn_codify.h
+                codify_main.cpp)
+
+add_executable (codify_bm
+                fn_codify.cpp fn_codify.h
+                codify_bm.cpp)
+
+
+set_property(TARGET codify PROPERTY CXX_STANDARD 23)
+set_property(TARGET codify_bm PROPERTY CXX_STANDARD 23)
+target_include_directories(codify PUBLIC . ../test_core)
+target_include_directories(codify_bm PUBLIC . ../test_core)
+target_link_libraries(codify test_core)
+target_link_libraries(codify_bm benchmark::benchmark test_core)

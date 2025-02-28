@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+
+project(dev-utils)
+add_library(dev-utils
+  tag_generator.cpp
+  dev-utils.cpp
+  ctf-messenger.cpp)

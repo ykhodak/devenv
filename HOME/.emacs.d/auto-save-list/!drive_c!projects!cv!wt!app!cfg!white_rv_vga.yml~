@@ -1,0 +1,18 @@
+import:
+  file: wt_common.yml
+
+video:
+  file: white_rv.mp4
+  defect: white_rv_defect.mp4
+  start: 84,1336:385:267:193
+#  export: 200-300
+
+
+frames:
+   - 161,1010:295:278:201
+   - 199,922:758:272:197
+
+logrun:
+  logfile: fp1_read_white_rv-20240930-8.csv
+  select: all
+

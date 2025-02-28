@@ -1,0 +1,2 @@
+#!/usr/bin/bash
+../build/Debug/ascii_client.exe ascii_harness.properties

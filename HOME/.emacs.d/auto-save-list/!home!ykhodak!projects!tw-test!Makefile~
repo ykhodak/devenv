@@ -1,0 +1,6 @@
+twtest:
+	g++ twbenchmark.cpp tw_test.cpp tw_mpool.cpp tw_main.cpp -std=c++17 -lpthread -o twtest
+
+twbenchmark:
+	g++ twbenchmark.cpp tw_test.cpp tw_mpool.cpp -std=c++17 -isystem benchmark/include \
+  -Lbenchmark/build/src -lbenchmark -lpthread -o twbenchmark

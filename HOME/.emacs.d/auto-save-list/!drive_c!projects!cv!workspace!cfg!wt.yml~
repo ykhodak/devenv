@@ -1,0 +1,35 @@
+env:
+  root_dir: C:/projects/cv/workspace
+  log_dir: logs
+  export_dir: logs/export
+  log_run_dir: logs/logrun
+  thumb_in_dir: data/thumb_in
+  thumb_out_dir: data/thumb_out
+  keep_logs: false
+  enable_gui: true
+
+video:
+  file: black_kia.mp4
+  defect: white_rv_defect.mp4
+
+params:
+  TrackingThrottleSec: 0.1
+  DeltaThumbThrottleSec: 1
+
+#start:
+  num: 84
+  roi: 1336,385,267,193
+
+export:
+  select: 1900-2100
+
+frames:
+  - num: 1984
+    roi: 2120,631,257,186
+  - num: 2050
+    roi: 2079,648,247,178
+
+logrun:
+  logfile: fp1_read_white_rv-20240930-8.csv
+  select: all
+

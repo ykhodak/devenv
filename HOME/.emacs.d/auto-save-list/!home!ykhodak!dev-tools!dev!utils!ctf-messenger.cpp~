@@ -1,0 +1,56 @@
+#include <arpa/inet.h>
+#include <thread>
+#include "ctf-messenger.h"
+
+static char frame_start    {4};
+static char frame_end      {3};
+static uint16_t protocol   {32};
+
+bool dev::ctf_messenger::init(int skt, size_t sleep_time)
+{
+    m_skt = skt;
+    m_protocol = htons(protocol);
+    m_spin_sleep_time_ms = sleep_time;
+    return true;
+};
+
+bool dev::ctf_messenger::send_packet(char* bdata, uint32_t bdata_len)
+{
+    if(!sendall(m_skt, (char*)&frame_start, 1))return false;
+    if(!sendall(m_skt, (char*)&m_protocol, 2))return false;
+    uint32_t bdata_len_h = ntohl(bdata_len);
+    if(!sendall(m_skt, (char*)&bdata_len_h, 4))return false;
+    if(!sendall(m_skt, (char*)bdata, bdata_len))return false;
+    if(!sendall(m_skt, (char*)&frame_end, 1))return false;
+    return true;
+};
+
+void dev::ctf_messenger::spin_packets(char* bdata, uint32_t bdata_len)
+{
+    auto session_start = time(nullptr);
+    size_t pnum = 0;
+    size_t total_sent = 0;
+    size_t print_time = 0;
+
+    while(1)
+    {
+        if(!send_packet(bdata, bdata_len))return;
+        
+        if(m_spin_sleep_time_ms > 0)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(m_spin_sleep_time_ms));
+        }
+
+        total_sent += bdata_len;
+        ++pnum;
+        
+        auto now = time(nullptr);
+        auto time_delta = now - session_start;
+        if(print_time != (int)time_delta && time_delta%2 == 0)
+        {
+            print_time = (int)time_delta;
+            auto bpsec = int(total_sent / time_delta);
+            std::cout << "#" << pnum << " " << dev::size_human(total_sent) << " " << dev::size_human(bpsec) << "/sec" << std::endl;
+        }        
+    }    
+};

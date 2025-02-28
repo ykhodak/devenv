@@ -1,0 +1,13 @@
+export VCPKG_ROOT=/c/tools/vcpkg
+export PATH=$PATH:$VCPKG_ROOT
+export WTHOME=/c/projects/cv/wt
+source $WTHOME/scripts/bash.env
+
+
+function e() { emacs "$@" &}
+alias prj='cd /c/projects/tucpp;lt'
+alias venv='source ~/.venv/Scripts/activate'
+alias nas='ssh ykhodak@ds218'
+alias pi='ssh robot@pi'
+alias mini='ssh ykhodak@mini'
+alias python3='python $@'

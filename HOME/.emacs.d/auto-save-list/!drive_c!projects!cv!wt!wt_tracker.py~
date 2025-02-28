@@ -1,0 +1,195 @@
+import cv2 as cv
+from dataclasses import dataclass
+from wt_utl import FpsClock
+from wt_utl import ImgUtl, VideoClock
+from wt_text import CMarkLine
+from wt_text import CMark
+from wt_text import CColor
+from wt_thumb_sift import ThumbSift
+
+@dataclass
+class Tracker:
+    roi = None
+    tracker = None
+    color = None
+    fps = FpsClock()
+    frames_captured = 0
+    name = ''
+    name_sym = ''
+    tracking_ok = False
+
+    def __init__(self, tracker, name, name_sym, color):
+        self.tracker = tracker
+        self.name = name
+        self.name_sym = name_sym
+        self.color = color
+        self.tracking_ok = True
+
+    def init_tracker(self, frame, roi):
+        if self.tracker is not None:
+            self.roi = roi
+            self.tracker.init(frame, roi)
+            self.tracking_ok = True
+            print('init-tracker {} [{}] [{}]'.format(self.name, self.name_sym, self.roi))
+                
+    def update_tracker(self, frame):
+        if self.tracking_ok:
+            self.fps.begin()
+            r, self.roi = self.tracker.update(frame)
+            self.fps.end()
+            if not r or self.roi is None:
+                self.tracking_ok = False
+        return self.tracking_ok
+
+    def restore_tracker(self, t, frame, roi):
+        self.tracker = t
+        self.init_tracker(frame, roi)
+
+    def draw_roi(self, frame):
+        if self.tracking_ok and self.roi:
+            p1,p2 = ImgUtl.roi2pt(self.roi)
+            cv.rectangle(frame, p1, p2, self.color, 2, 1)
+
+    def get_agenda_mark(self) :
+        s = '{}/{}'.format(self.name_sym, self.fps.fps)
+        return CMark(s, self.color)
+
+
+@dataclass
+class TrackerMgr:
+    video_clock: VideoClock
+    trackers = []
+    union_roi = None
+    has_lost_trackers = False
+    has_valid_trackers = False
+    thumb_sift: ThumbSift = None
+#    thumb_win_name = 'Thumbnail'
+
+    def __init__(self, vc, tracker_symbols_str) :
+        self.video_clock = vc
+        for s in tracker_symbols_str:
+            t = TrackerMgr.create_tracker(s)
+            if t:
+                self.trackers.append(t)
+            else:
+                print('Unrecognized tracker symbol [{}]'.format(s))
+        self.thumb_sift = ThumbSift(vc)
+
+
+    def init_trackers(self, frame, roi):
+        for t in self.trackers:
+            t.init_tracker(frame, roi)
+
+    def restore_lost_trackers(self, frame):
+        if self.union_roi is not None:
+            print('restoring lost trackers to [{}]'.format(self.union_roi))
+            for t in self.trackers:
+                if not t.tracking_ok:
+                    t2 = ImgUtl.create_cv_tracker(t.name_sym)
+                    if t2:
+                        t.restore_tracker(t2, frame, self.union_roi)
+#                    t.update_tracker(self.union_roi)
+
+    def update_trackers(self, frame):
+        self.has_lost_trackers = False
+        self.has_valid_trackers = False
+        for t in self.trackers:
+            if t.tracking_ok:
+                if not t.update_tracker(frame):
+                    has_lost_trackers = True
+                    active, invalid = self.get_trackers_num()
+                    s1 = ''
+                    if active > 0:
+                        t = self.trackers[0]
+                        s1 = '{}'.format(t.roi)
+                    print('lost-tracker [{}] left [{}] [{}]'.format(t.name, active, s1))
+                else:
+                    self.has_valid_trackers = True
+            else:
+                self.has_lost_trackers = True
+        self.union_roi = self.calc_union_roi()
+        if self.all_tracker_ok() and self.union_roi is not None:
+            t = ImgUtl.subimg(frame, self.union_roi)
+            self.update_detected_thumbnail(t)
+        return self.has_lost_trackers
+
+    def update_detected_thumbnail(self, t):
+        self.thumb_sift.process_new_thumb(t)
+
+    def all_tracker_ok(self):
+        return self.has_valid_trackers and (not self.has_lost_trackers)
+    def get_trackers_num(self):
+        active = 0
+        invalid = 0
+        for t in self.trackers:
+            if t.tracking_ok:
+                active += 1
+            else:
+                invalid += 1
+        return active, invalid
+
+    def has_active_tracker(self):
+        active, invalid = self.get_trackers_num()
+        return active > 0
+
+    def deactivate_trackers(self):
+        for t in self.trackers:
+            t.tracking_ok = False
+
+    def calc_union_roi(self):
+        rv = None
+        if len(self.trackers) > 0:
+            idx = 0
+            while idx < len(self.trackers):
+                t = self.trackers[idx]
+                if t.tracking_ok:
+                    rv = t.roi
+                    idx += 1
+                    break
+                idx += 1
+            while idx < len(self.trackers):
+                t = self.trackers[idx]
+                if t.tracking_ok and t.roi is not None:
+                    r2 = t.roi
+                    rv = ImgUtl.roi_union(rv, r2)
+                idx += 1
+        return rv
+
+    def draw_agenda(self, img, pos):
+        ml = CMarkLine()
+        for t in self.trackers:
+            if t.tracking_ok:
+                ml.add_mark_obj (t.get_agenda_mark())
+        return ml.draw_line(img, pos)
+
+    def draw_roi(self, frame):
+        have_valid_tracker = False
+        for t in self.trackers:
+            if t.tracking_ok:
+                t.draw_roi(frame)
+                have_valid_tracker = True
+        if have_valid_tracker and self.union_roi:
+            pl, p2 = ImgUtl.roi2pt(self.union_roi)
+            cv.rectangle(frame, pl, p2, (255,255,255),2,1)
+
+    def show_thumb(self):
+        self.thumb_sift.tdb.show_thumbs()
+
+
+    @staticmethod
+    def create_tracker(s):
+        t = None
+        cvt = ImgUtl.create_cv_tracker(s)
+        if s == 'B':
+            t = Tracker(cvt, 'BOOSTING', s, CColor.blue())
+        elif s == 'K':
+            t = Tracker(cvt, 'KCF', s, CColor.red())
+        elif s == 'C':
+            t = Tracker(cvt, 'CSRT', s, CColor.green())
+        elif s == 'M':
+            t = Tracker(cvt, 'MEDIANFLOW', s, CColor.aqua())
+        elif s == 'I':
+            t = Tracker(cvt, 'MIL', s, CColor.yellow())
+        elif s == 'O':
+            t = Tracker(cvt, 'MOSSE', s, CColor.yellow())
+        return t

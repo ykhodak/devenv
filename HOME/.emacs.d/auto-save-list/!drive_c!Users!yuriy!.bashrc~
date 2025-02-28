@@ -1,0 +1,20 @@
+#alias ls="ls --color=auto"
+#export GREP_COLORS='ms=01;34:mc=01;34:sl=:cx=:fn=35:ln=32:bn=32:se=36'
+#LS_COLORS="di=31;1:ln=36;1:ex=31;1:*~=31;1:*.html=31;1:*.shtml=37;1"
+#export LS_COLORS
+#export GREP_OPTIONS='--color=always'
+
+    
+#alias lt='ls -lt'               
+#alias ll='ls -l'               
+#alias lg='ls -l|grep $@'
+#alias eg='env|grep $@'
+#alias cg='|grep --color=always $@'
+#function e() { runemacs "$@" &}
+#alias prj='cd /c/projects/cv/wt/src;lt'
+#alias pi='ssh ykhodak@192.168.1.147'
+
+source ~/init-local.bashrc
+
+
+

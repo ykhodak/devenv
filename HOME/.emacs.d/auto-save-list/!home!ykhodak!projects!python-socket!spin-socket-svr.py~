@@ -1,0 +1,89 @@
+#!/usr/bin/python3
+
+import sys, getopt, time, socket
+
+
+def printUsage():
+    print('usage: spin-socket-svr.py -p <PORT> -i <inputfile> -d <packet-delay msec>')
+    print('example: spin-socket-svr.py -p 50000 -i test.data -d 300')
+
+inputfile = ''
+port = 0
+packet_delay = 0.1
+data = 0
+
+def readInputFile():
+    global data
+    print('reading [{}]'.format(inputfile))
+    f = open(inputfile, 'rb')
+    data = f.read()
+
+def printInputFile():
+    print("data=[{} Bytes]".format(len(data)))
+
+def printConfig():
+    print('Input file [{}]'.format(inputfile))
+    print('Port [{}]'.format(port))
+    print('Delay [{}]'.format(packet_delay))    
+
+def runServer():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('127.0.0.1', port))
+    s.listen()
+    c, addr = s.accept()
+    pnum = 0
+    total_sent = 0
+    session_start = time.time()
+    print_time = 0;
+    with c:
+        print(f"Connected by {addr}")
+        while True:
+            snum = "[" + str(pnum) + ']\n'
+            num = snum.encode()
+            num_sz = len(num)
+            data_sz = len(data)
+            packet_size = num_sz + data_sz
+            #print('num-size={} data={} total={}'.format(num_sz, data_sz, packet_size))
+            c.send(packet_size.to_bytes(8, 'big'))
+            c.sendall(num)
+            c.sendall(data)
+            pnum = pnum + 1
+            total_sent = total_sent + packet_size
+            time_delta = time.time() - session_start
+            if time_delta > 1 and int(time_delta)%2==0 and print_time != int(time_delta):
+                print_time = int(time_delta)
+                bpsec = int(total_sent / time_delta)
+                print('#{} {} Bytes [{} Bytes/sec]'.format(pnum, total_sent, bpsec))
+            if packet_delay > 0:
+                time.sleep(packet_delay)
+            
+    
+def main(argv):
+    global inputfile
+    global port
+    global packet_delay
+    if len(sys.argv) < 7:
+        printUsage()
+        sys.exit()
+    try:
+        opts, args = getopt.getopt(argv,"hi:p:d:")
+    except getopt.GetoptError:
+        printUsage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            printUsage()
+            sys.exit()
+        elif opt in ("-i"):
+            inputfile = arg
+        elif opt in ("-p"):
+            port = int(arg)
+        elif opt in ("-d"):
+            packet_delay = float(arg) / 1000
+    printConfig()
+    readInputFile()
+    printInputFile()
+    runServer()
+    
+if __name__ == "__main__":
+    main(sys.argv[1:])

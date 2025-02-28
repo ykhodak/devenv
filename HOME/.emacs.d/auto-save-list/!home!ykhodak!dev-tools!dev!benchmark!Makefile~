@@ -1,0 +1,24 @@
+.PHONY: all
+info:
+        @echo $(CXX)
+        @which g++
+        @g++ --version
+        @echo ----------
+
+list: $(wildcard *.cpp)
+        @ls -la $?
+
+INC := -I/mnt/sherman/home/ykhodak/projects/ykh-util/study/benchmark/include
+LINK := -L/mnt/sherman/home/ykhodak/projects/ykh-util/study/benchmark/build/src
+CPPFLAGS := $(INC) $(LINK) -std=c++17 -Wall -Wextra -O3
+LDFLAGS := -lbenchmark -lpthread
+BUILD := bin
+
+%:
+        @mkdir -p $(BUILD)
+        cppcheck $@.cpp
+        $(CXX) $(CPPFLAGS) $@.cpp $(LDFLAGS) -o $(BUILD)/$@
+        ls -la $(BUILD)/$@
+
+clean:
+        @\rm -rf $(BUILD)

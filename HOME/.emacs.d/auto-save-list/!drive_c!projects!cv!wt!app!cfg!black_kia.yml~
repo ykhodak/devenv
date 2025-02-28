@@ -1,0 +1,24 @@
+import:
+  file: wt_common.yml
+
+video:
+  file: black_kia.mp4
+  defect: white_rv_defect.mp4
+
+start:
+  num: 62
+  roi: 1984,644,438,193
+
+export:
+  select: 1900-2100
+
+frames:
+  - num: 1984
+    roi: 2120,631,257,186
+  - num: 2050
+    roi: 2079,648,247,178
+
+logrun:
+  logfile: fp1_read_back_kia-20240930-8.csv
+  select: all
+

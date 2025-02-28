@@ -1,0 +1,36 @@
+env:
+  log_dir: ../logs
+
+video:
+  file: ../data/white_rv.mp4
+  defect: ../data/white_rv_defect.mp4
+
+params:
+  TrackingThrottleSec: 0.4
+  DeltaThumbThrottleSec: 1
+
+#start:
+  num: 73
+  x: 1427
+  y: 423
+  w: 231
+  h: 153
+
+frames:
+  - num: 10
+    x: 10
+    y: 20
+    w: 300
+    h: 250
+  - num: 20
+    x: 10
+    y: 20
+    w: 300
+    h: 250
+
+logrun:
+  logfile: ../logs/read_white_rv-20240928.csv.bak
+  logframes:
+    - 107
+    - 146
+    - 184

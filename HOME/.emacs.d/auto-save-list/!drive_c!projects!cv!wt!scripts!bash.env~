@@ -1,0 +1,12 @@
+alias lt='ls -lt'               
+alias ll='ls -l'               
+alias lg='ls -l|grep $@'
+alias eg='env|grep $@'
+alias cg='|grep --color=always $@'
+function e() { emacs "$@"}
+alias h='history'
+alias venv='source ~/.venv/Scripts/activate'
+
+function pid(){ 
+ps -ef | grep -va grep | grep "$@"
+}

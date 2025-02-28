@@ -1,0 +1,22 @@
+add_executable (tw_test_orders
+                util.h
+                order.h
+                order_cache.h
+                test_orders.h                
+                test_orders.cpp
+                test_orders_main.cpp)
+
+add_executable (tw_bm_orders
+                util.h
+                order.h
+                order_cache.h
+                test_orders.h
+                test_orders.cpp
+                bm_orders.cpp)
+
+
+set_property(TARGET tw_test_orders PROPERTY CXX_STANDARD 23)
+set_property(TARGET tw_bm_orders PROPERTY CXX_STANDARD 23)
+target_link_libraries(tw_test_orders)
+target_link_libraries(tw_bm_orders benchmark::benchmark)
+

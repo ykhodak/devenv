@@ -1,0 +1,15 @@
+add_executable (mapit
+                fn_mapit.cpp fn_mapit.h
+                mapit_main.cpp)
+
+add_executable (mapit_bm
+                fn_mapit.cpp fn_mapit.h
+                mapit_bm.cpp)
+
+
+set_property(TARGET mapit PROPERTY CXX_STANDARD 23)
+set_property(TARGET mapit_bm PROPERTY CXX_STANDARD 23)
+target_include_directories(mapit PUBLIC . ../test_core)
+target_include_directories(mapit_bm PUBLIC . ../test_core)
+target_link_libraries(mapit test_core)
+target_link_libraries(mapit_bm benchmark::benchmark test_core)

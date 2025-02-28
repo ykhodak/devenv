@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+
+if [[ $(uname) == 'Linux' ]]; then
+    ../build/src/md_server harness.properties
+else
+    ../build/src/Debug/md_server.exe harness.properties
+#    ../build/src/Release/md_server.exe harness.properties      
+fi

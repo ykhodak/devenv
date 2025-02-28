@@ -1,0 +1,30 @@
+env:
+  root_dir: C:/projects/cv/wt_workspace
+  log_dir: logs
+  log_run_dir: logs/logrun
+  thumb_in_dir: data/thumb_in
+  thumb_out_dir: data/thumb_out
+  keep_logs: false
+
+video:
+  file: white_rv.mp4
+  defect: white_rv_defect.mp4
+
+params:
+  TrackingThrottleSec: 0.1
+  DeltaThumbThrottleSec: 1
+
+#start:
+  num: 73
+  roi: 1427,423,231,153
+
+frames:
+  - num: 10
+    roi: 10,20,300,250
+  - num: 20
+    roi: 10,20,300,250
+
+logrun:
+  logfile: fp1_read_white_rv-20240930-8.csv
+  select: all
+

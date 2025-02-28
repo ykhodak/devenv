@@ -1,0 +1,72 @@
+import cv2 as cv
+
+from dataclasses import dataclass
+wt_utl import ImgUtlL
+
+wt_utl import FpsClock
+wt_text import CMarkLine
+wt_text import CMark
+
+wt_text import CColor
+
+From
+From
+From
+From
+From
+
+@dataclass
+class CSIFT:
+
+sift = None
+keypt =
+desc1 =
+bf =
+fps =
+
+None
+
+None
+
+None
+
+FpsClock()
+
+win_name = 'SIFT'
+
+def init__(self):
+self.sift = cv.SIFT_create()
+self.bf = cv.BFMatcher()
+
+def init_sift(self, frame, roi):
+print('init-sift')
+roi_img = cv.cvtColor(ImgUtl.subimg(frame, roi), cv.COLOR_BGR2GRAY)
+self.keyp1, self.descl = self.sift.detectAndCompute(roi_img, None)
+Ht cv.imshow('ROI', roi_img)
+k_img = cv.drawKeypoints(roi_img,self.keyp1,roi_img)
+cv.imshow( winname: 'SIFT-start', k_img)
+def match(self, frame, roi):
+roi_img = cv.cvtColor(ImgUtl.subimg(frame, roi), cv.COLOR_BGR2GRAY)
+self.fps.begin()
+k2, d2 = self.sift.detectAndCompute(roi_img, None)
+matches = self.bf.match(self.desc1, d2)
+self.fps.end()
+for m in matches:
+q_idx = m.queryIdx
+t_idx = m.trainIdx
+pti = self.keyp1[q_idx] .pt
+pt2 = k2[t_idx].pt
+cv.circle(roi_img, center: (int(pt2[0]), int(pt2[1])), radius: 2,
+cv.imshow(self.win_name, roi_img)
+def get_agenda_mark(self):
+s = '{}/{}'.format( *args: 'SIFT', self.fps.fps)
+return CMark(s, color: (255,255,255))
+def draw_agenda(self, img, pos):
+
+ml = CMarkLine()
+ml.add_mark_obj(self.get_agenda_mark())
+return ml.draw_line(img, pos)
+
+color: (255,0,5), thickness: 2)
+
+

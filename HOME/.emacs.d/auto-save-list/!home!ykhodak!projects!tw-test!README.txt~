@@ -1,0 +1,51 @@
+Usage
+1.Running against 2 provided examples
+int main(int argc, char** argv)
+{
+    TW::test_order_cache_dyn();
+}
+
+output
+    
+-- matching case1--
+SecId1 300
+SecId2 1000
+SecId3 600
+-- matching case2--
+SecId1 900
+SecId2 600
+SecId3 0
+
+more tests available in tw_test.h
+    
+2.Running series of tests
+TW::test_all_dyn();
+
+Design & Implementation
+
+OrderCacheInterfaceImpl implements OrderCacheInterface with Order object in hashmap.
+OrderCacheInterfaceDynImpl implements OrderCacheInterface with Order* in hashmap.
+
+#define USE_ORDER_MPOOL
+defines memory pool for OrderCacheInterfaceDynImpl
+
+
+3.Measuring getMatchingSizeForSecurity performance using Google Benchmark.
+
+BM_MatchingSize/1000 - function was called on 1000 orders OrderCacheInterfaceImpl cache
+BM_MatchingSizeDyn/1000 - function was called on 1000 orders OrderCacheInterfaceDynImpl cache
+    
+------------------------------------------------------------------
+Benchmark                        Time             CPU   Iterations
+------------------------------------------------------------------
+BM_MatchingSize/1000        299944 ns       298818 ns         2355
+BM_MatchingSize/3000        931704 ns       926455 ns          755
+BM_MatchingSize/5000       1589706 ns      1584834 ns          435
+BM_MatchingSize/7000       2213536 ns      2211184 ns          312
+BM_MatchingSize/9000       2998982 ns      2997090 ns          243
+BM_MatchingSizeDyn/1000     168035 ns       167966 ns         4006
+BM_MatchingSizeDyn/3000     513913 ns       513253 ns         1290
+BM_MatchingSizeDyn/5000     876276 ns       875424 ns          810
+BM_MatchingSizeDyn/7000    1152889 ns      1152222 ns          585
+BM_MatchingSizeDyn/9000    1513312 ns      1512165 ns          460
+

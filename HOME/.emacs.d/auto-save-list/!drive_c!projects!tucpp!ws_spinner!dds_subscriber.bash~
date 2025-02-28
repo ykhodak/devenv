@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+
+source ./ws.env
+
+if [[ $(uname) == 'Linux' ]]; then
+    ../build/src/dds/md_dds publisher
+else
+    ../build/src/dds/$SPINNER_BUILD/md_dds.exe publisher
+fi

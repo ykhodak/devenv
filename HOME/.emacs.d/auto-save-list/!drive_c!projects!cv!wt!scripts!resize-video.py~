@@ -1,0 +1,22 @@
+import sys
+import time
+import cv2 as cv
+
+def print_usage():
+    print('Usage: ' + sys.argv[0] + ' <input-file> <output-file> <width> <height>')
+
+if len(sys.argv) < 5:
+    print_usage()
+    sys.exit(0)
+
+input_file = sys.argv[1]
+out_file = sys.argv[2]
+width = int(sys.argv[3])
+height = int(sys.argv[4])
+
+def resize_image():
+    img = cv.imread(input_file)
+    img = cv.resize(img, (width, height))
+    cv.imwrite(out_file, img)
+
+resize_image()

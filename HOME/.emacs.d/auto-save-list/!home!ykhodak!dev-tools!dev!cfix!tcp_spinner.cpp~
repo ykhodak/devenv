@@ -1,0 +1,162 @@
+#include "tcp_spinner.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+
+static bool as_server = false;
+static std::string host;
+static size_t port;
+static std::string data_file;
+char* bdata;
+uint32_t bdata_len = 0;
+char frame_start = 4;
+char frame_end = 3;
+uint16_t protocol = 32;
+
+
+bool load_data_file();
+void run_server();
+void serve_client(int skt);
+bool sendall(int s, char *buf, size_t len);
+
+
+void dev::start_tcp_spinner(S2S&& m)
+{    
+#define CHECK_FIELD(N, V)i = m.find(N);if(i == m.end()){std::cout << "ERROR. tcp_spinner expected [" << N << "]" << std::endl; return;}else{V = i->second; std::cout << "cfg " << N " = " << i->second << "\n";}
+
+    std::string prop_val = "";
+    auto i =  m.begin();
+    CHECK_FIELD("type", prop_val);
+
+    if(prop_val == std::string("server"))
+    {
+        as_server = true;
+    }
+    else if(prop_val == std::string("client"))
+    {
+        as_server = false;
+    }
+    else
+    {
+        std::cout << "ERROR. tcp_spinner 'type' expected as 'client' or 'server'.]" << std::endl;
+        return;
+    }
+
+    CHECK_FIELD("host", host);
+    CHECK_FIELD("port", prop_val);
+    port = std::stoi(prop_val);
+    CHECK_FIELD("data-file", data_file);    
+    
+#undef CHECK_FIELD
+
+    if(as_server){
+        if(!load_data_file()){
+            return;
+        }
+        
+        run_server();
+    }
+};
+
+void run_server()
+{
+    struct sockaddr_in address;
+    int addrlen = sizeof(address);
+    auto skt_fd = socket(AF_INET, SOCK_STREAM, 0);
+    
+    if (skt_fd < 0) {
+        perror("server/socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    int opt = 1;
+    if (setsockopt(skt_fd, SOL_SOCKET,
+                   SO_REUSEADDR | SO_REUSEPORT, &opt,
+                   sizeof(opt)))
+    {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+
+
+    memset(&address, 0 , sizeof(address));
+    address.sin_family = AF_INET;
+    inet_pton(AF_INET, host.c_str(), &(address.sin_addr));
+    address.sin_port = htons(port);
+
+    if (bind(skt_fd, (struct sockaddr*)&address, addrlen) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+    while(true)
+    {
+        std::cout << "listen.. " << std::endl;
+        if (listen(skt_fd, 3) < 0) {
+            perror("listen");
+            exit(EXIT_FAILURE);
+        }
+
+        auto client_skt = accept(skt_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen);
+        if(client_skt < 0){
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+
+        static char client_ip[64] = "";
+        inet_ntop(AF_INET, &(address.sin_addr), client_ip, INET_ADDRSTRLEN);
+        std::cout << "accepted client [" << client_ip << "]" << std::endl;
+    }
+};
+
+
+void serve_client(int skt)
+{
+    sendall(skt, (char*)&frame_start, 1);
+    sendall(skt, (char*)&protocol, 2);
+    sendall(skt, (char*)&bdata_len, 4);
+    sendall(skt, (char*)&bdata, bdata_len);
+    sendall(skt, (char*)&frame_end, 1);
+};
+
+
+bool load_data_file()
+{
+    std::ifstream f(data_file, std::ifstream::binary);
+    if(f) {
+        f.seekg(0, f.end);
+        bdata_len = static_cast<size_t>(f.tellg());
+        f.seekg(0, f.beg);
+
+        bdata = new char[bdata_len];
+        f.read(bdata, bdata_len);
+        f.close();
+        std::cout << "loaded data file [" << bdata_len << "] Bytes" << std::endl;
+    }
+    else
+    {
+        std::cout << "ERROR. failed to load file [" << data_file << std::endl;
+        perror("load-file");
+        return false;
+    }
+
+    return true;
+};
+
+bool sendall(int s, char *buf, size_t len)
+{
+    size_t total = 0; // how many bytes we've sent
+    int bytesleft = len; // how many we have left to send
+    int n = 0;
+    while(total < len)
+    {
+       n = send(s, buf+total, bytesleft, 0);
+       if (n == -1) {
+           perror("socket-send");
+           return false;
+       }
+       total += n;
+       bytesleft -= n;
+    }
+    return true;
+};

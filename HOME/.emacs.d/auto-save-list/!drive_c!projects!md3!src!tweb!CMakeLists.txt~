@@ -1,0 +1,28 @@
+cmake_minimum_required (VERSION 3.24)
+
+project (md3 C CXX)
+
+find_package(benchmark REQUIRED)
+
+add_executable (test_orders
+                util.h
+                order.h
+                order_cache.h
+                test_orders.h                
+                test_orders.cpp
+                test_orders_main.cpp)
+
+add_executable (bm_orders
+                util.h
+                order.h
+                order_cache.h
+                test_orders.h
+                test_orders.cpp
+                bm_orders.cpp)
+
+
+set_property(TARGET test_orders PROPERTY CXX_STANDARD 23)
+set_property(TARGET bm_orders PROPERTY CXX_STANDARD 23)
+target_link_libraries(test_orders)
+target_link_libraries(bm_orders benchmark::benchmark)
+
