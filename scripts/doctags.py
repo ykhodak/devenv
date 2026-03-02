@@ -12,14 +12,16 @@ class bclr:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    UNDERLINE = '\033[4mi'
+    DARKCYAN = '\033[36m'
+    YELLOW = '\033[93m'
 
 
 
 def process_doc_files(tag_search):
     docs_dir = os.environ.get("DOCSHOME")
     gs = '{}/*.txt'.format(docs_dir)
-    tag_pattern=r"^\S*\:$"
+    tag_pattern=r"\:$"
     snipet_pattern=r"\s*"
     for name in glob.glob(gs):
         filename, _ = os.path.splitext(os.path.basename(name))
@@ -30,7 +32,13 @@ def process_doc_files(tag_search):
                     if re.search(snipet_pattern, ln):
                         ln = ln.strip()
                         if len(ln) > 0:
-                            print(' {}'.format(ln))
+                            comment_idx = ln.find('##')
+                            if comment_idx != -1:
+                                before_comment = ln[:comment_idx]
+                                comment = ln[comment_idx:]
+                                print('  {}{}{}{}'.format(before_comment, bclr.DARKCYAN, comment, bclr.ENDC))
+                            else:
+                                print(' {}'.format(ln))
                         else:
                             tag_header = ''
                 else:

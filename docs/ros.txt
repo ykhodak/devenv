@@ -1,0 +1,12 @@
+ros2|install|commands: 
+ sudo snap install code --classic ## add python & ROS extensions
+ 
+ros2|cmd|build:
+  colcon build --symlink-install ## link to node in install folder
+
+ros|interest:
+ TurtleBot4Lessons
+
+colcon-tip: 
+ https://www.youtube.com/watch?v=3GbrKQ7G2P0&list=PLLSegLrePWgJudpPUof4-nVFHGkB62Izy&index=3
+
