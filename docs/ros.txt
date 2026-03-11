@@ -10,3 +10,15 @@ ros|interest:
 colcon-tip: 
  https://www.youtube.com/watch?v=3GbrKQ7G2P0&list=PLLSegLrePWgJudpPUof4-nVFHGkB62Izy&index=3
 
+ros|setup:
+ source /opt/ros/jazzy/setup.bash ## in bashrc
+ source ~/ros2_ws/install/setup.bash
+ echo $ROS_PACKAGE_PATH ## printenv | grep -i ROS
+ 
+ros|package:
+ ros2 pkg create --build-type ament_cmake my_package ##ament_python
+ 
+ pi|power:
+  TRACO POWER TSR 2-2450
+  LY-KREE K120508
+  QC4.0 Power Bank 18650 Charging Module
