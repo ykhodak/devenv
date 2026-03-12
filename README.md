@@ -6,9 +6,9 @@ Some bash scripts and for dev env setup
  source ~/init-local.bashrc
 
 ## init-local.bashrc
- export DEVHOME=/c/projects/devenv
- export DOCSHOME=$DEVHOME/docs
- source $DEVHOME/scripts/dev.env 
+ - export DEVHOME=/c/projects/devenv
+ - export DOCSHOME=$DEVHOME/docs
+ - source $DEVHOME/scripts/dev.env 
 
 
 ## setup
