@@ -2,6 +2,14 @@
 
 Some bash scripts and for dev env setup
 
+## bashrc
+ source ~/init-local.bashrc
+
+## init-local.bashrc
+ export DEVHOME=/c/projects/devenv
+ export DOCSHOME=$DEVHOME/docs
+ source $DEVHOME/scripts/dev.env 
+
 
 ## setup
  - install python with system wide path
