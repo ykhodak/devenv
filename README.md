@@ -26,3 +26,7 @@ Some bash scripts and for dev env setup
  - python3 -m venv .venv
  - sudo apt-get install libgl1-mesa-dev
  - pip install opencv-python opencv-contrib-python scipy pyyaml
+
+## ros
+ - sudo apt install joystick jstest-gtk evtest
+ 
