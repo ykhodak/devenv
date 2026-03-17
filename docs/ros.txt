@@ -19,7 +19,7 @@ ros|package|create:
  ros2 pkg create --build-type ament_cmake my_package ##ament_python
  
 ros|apt:
- apt install v3l-utils roc-foxy-v4l2-camera ##camera - check user group 'video'
+ apt install v4l-utils roc-foxy-v4l2-camera ##camera - check user group 'video'
  
  
  
