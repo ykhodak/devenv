@@ -15,10 +15,11 @@ ros|setup:
  source ~/ros2_ws/install/setup.bash
  echo $ROS_PACKAGE_PATH ## printenv | grep -i ROS
  
-ros|package:
+ros|package|create:
  ros2 pkg create --build-type ament_cmake my_package ##ament_python
  
- pi|power:
-  TRACO POWER TSR 2-2450
-  LY-KREE K120508
-  QC4.0 Power Bank 18650 Charging Module
+ros|apt:
+ apt install v3l-utils roc-foxy-v4l2-camera ##camera - check user group 'video'
+ 
+ 
+ 
