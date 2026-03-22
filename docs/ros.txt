@@ -21,5 +21,7 @@ ros|package|create:
 ros|apt:
  apt install v4l-utils roc-foxy-v4l2-camera ##camera - check user group 'video'
  
- 
+joystick|ubuntu:
+ sudo jstest /dev/input/js2
+ sudo dmesg | grep -i joy
  
