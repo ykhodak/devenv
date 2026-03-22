@@ -38,7 +38,7 @@ def process_doc_files(tag_search):
                                 comment = ln[comment_idx:]
                                 print('  {}{}{}{}'.format(before_comment, bclr.DARKCYAN, comment, bclr.ENDC))
                             else:
-                                print(' {}'.format(ln))
+                                print('  {}'.format(ln))
                         else:
                             tag_header = ''
                 else:
