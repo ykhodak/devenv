@@ -14,13 +14,25 @@ ros|setup:
  source /opt/ros/jazzy/setup.bash ## in bashrc
  source ~/ros2_ws/install/setup.bash
  echo $ROS_PACKAGE_PATH ## printenv | grep -i ROS
+ rosversion -d ## get ROS distribution
  
 ros|package|create:
  ros2 pkg create --build-type ament_cmake my_package ##ament_python
  
-ros|apt:
- apt install v4l-utils roc-foxy-v4l2-camera ##camera - check user group 'video'
- 
+camera|setup:
+ apt install v4l-utils roc-kilted-v4l2-camera
+ groups ##camera - check user group 'video'
+ sudo usermod -aG video robot
+ v4l2-ctl --list-devices
+ cheese ## finally see video window 
+
+ros|camera:
+ sudo apt install ros-kilted-image-transport-plugins ros-kilted-rqt-image-view
+ ros2 run v4l2_camera v4l2_camera_node --ros-arg -p image_size:="[640,480]" -p camera_frame_id:=camera_link_optical
+ ros2 run rqt_image_view rqt_image_view
+
+
+
 joystick|ubuntu:
  sudo jstest /dev/input/js2
  sudo dmesg | grep -i joy
