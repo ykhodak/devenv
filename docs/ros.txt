@@ -20,7 +20,7 @@ ros|package|create:
  ros2 pkg create --build-type ament_cmake my_package ##ament_python
  
 camera|setup:
- apt install v4l-utils roc-kilted-v4l2-camera
+ apt install v4l-utils ros-kilted-v4l2-camera
  groups ##camera - check user group 'video'
  sudo usermod -aG video robot
  v4l2-ctl --list-devices
