@@ -2,6 +2,7 @@ ros2|install|commands:
  sudo snap install code --classic ## add python & ROS extensions
  
 ros2|cmd|build:
+  cd dev_ws
   colcon build --symlink-install ## link to node in install folder
 
 ros|interest:
@@ -16,7 +17,7 @@ ros|setup:
  echo $ROS_PACKAGE_PATH ## printenv | grep -i ROS
  rosversion -d ## get ROS distribution
  
-ros|package|create:
+pkg|package|create:
  ros2 pkg create --build-type ament_cmake my_package ##ament_python
  
 camera|setup:
@@ -35,6 +36,20 @@ linux|x11:
  export GDK_BACKEND=x11
 
 joystick|ubuntu:
+ evtest
  sudo jstest /dev/input/js2
  sudo dmesg | grep -i joy
+
+joy|topic:
+ ros2 run joy joy_enumerate_devices
+ ros2 run joy joy_node
+ ros2 topic echo /joy
+ ros2 run joy_tester test_joy
+ ros2 launch robot_1_ws/src/launch/joy_node-launch.py ## joy->cmd_vel
+ ros2 topic echo /cmd_vel
+ 
+node:
+ ros2 node list
+ ros2 topic list
+ ros2 topic echo
  
