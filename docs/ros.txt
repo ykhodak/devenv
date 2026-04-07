@@ -53,3 +53,5 @@ node:
  ros2 topic list
  ros2 topic echo
  
+param:
+ ros2 param list
