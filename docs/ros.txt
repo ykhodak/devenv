@@ -18,7 +18,8 @@ ros|setup:
  rosversion -d ## get ROS distribution
  
 pkg|package|create:
- ros2 pkg create --build-type ament_cmake my_package ##ament_python
+ ros2 pkg create --build-type ament_cmake my_package
+ ros2 pkg create --build-type ament_python my_package --dependencie rclpy
  
 camera|setup:
  apt install v4l-utils ros-kilted-v4l2-camera
@@ -45,8 +46,9 @@ joy|topic:
  ros2 run joy joy_node
  ros2 topic echo /joy
  ros2 run joy_tester test_joy
- ros2 launch robot_1_ws/src/launch/joy_node-launch.py ## joy->cmd_vel
+ ros2 launch pi_robot joy2twist.launch.py ## joy->cmd_vel
  ros2 topic echo /cmd_vel
+ ros2 run pi_robot manual1 ## cmd_vel->pi
  
 node:
  ros2 node list
