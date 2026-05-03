@@ -1,0 +1,5 @@
+roomba|c++|libcreate:
+ git clone https://github.com/AutonomyLab/libcreate.git
+ cd build;cmake ..;make
+ cmake --install . --prefix /home/robot/robot_ws/3rd-party
+

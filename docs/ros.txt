@@ -43,7 +43,7 @@ joystick|ubuntu:
 
 uart:
  ls -lat /dev | grep ttyUSB
- sudo usermod -a -G dialout $USER
+ sudo usermod -a -G dialout $USER ## groups $USER
  sudo minicom -b 115200 -D /dev/ttyUSB0 ## test connection on loopback
 
 joy|topic:
@@ -53,7 +53,7 @@ joy|topic:
  ros2 run joy_tester test_joy
  ros2 launch pi_robot joy2twist.launch.py ## joy->cmd_vel
  ros2 topic echo /cmd_vel
- ros2 run pi_robot manual1 ## cmd_vel->pi
+ ros2 run pi_robot manual1_ctrl ## cmd_vel->pi
  
 node:
  ros2 node list
